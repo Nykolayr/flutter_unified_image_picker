@@ -96,33 +96,51 @@ class _CameraViewState extends State<CameraView> {
                   ),
                 ),
 
-                // Capture Image
-                IconButton(
-                  onPressed: () async {
-                    final path = await _controller.captureImage();
-                    if (path != null && context.mounted) {
-                      Navigator.pop(context, path);
-                    }
-                  },
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Container(
-                      height: 64,
-                      width: 64,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.camera,
-                        size: 32,
-                        color: Colors.white,
+                // Capture Image — серый круг, синий круг и белая иконка затвора в одном Stack по центру
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () async {
+                      final path = await _controller.captureImage();
+                      if (path != null && context.mounted) {
+                        Navigator.pop(context, path);
+                      }
+                    },
+                    customBorder: const CircleBorder(),
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: Center(
+                              child: Icon(
+                                Icons.camera,
+                                size: 32,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
