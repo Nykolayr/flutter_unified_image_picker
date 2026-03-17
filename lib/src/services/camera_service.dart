@@ -40,7 +40,7 @@ class CameraService {
     _cameraController = CameraController(
       _cameras![_selectedCamera],
       ResolutionPreset.high,
-      enableAudio: true,
+      enableAudio: false, // только фото — не запрашиваем микрофон/видео
     );
 
     await _cameraController!.initialize();
