@@ -5,7 +5,7 @@ import Photos
 public class FlutterUnifiedImagePickerPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "app.gallery/images", binaryMessenger: registrar.messenger())
-        let instance = SwiftFlutterMediaPickerPlugin()
+        let instance = FlutterUnifiedImagePickerPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
 
