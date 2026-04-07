@@ -11,7 +11,12 @@ class CameraView extends StatefulWidget {
   /// - Switch between available cameras.
   /// - Capture images.
   /// - Open the gallery bottom sheet to select existing images.
-  const CameraView({super.key});
+  ///
+  /// При [hideGalleryInSheet] шторка и кнопка её открытия остаются; из шторки
+  /// убрана только галерея (снимок только кнопкой съёмки).
+  const CameraView({super.key, this.hideGalleryInSheet = false});
+
+  final bool hideGalleryInSheet;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -23,7 +28,9 @@ class _CameraViewState extends State<CameraView> {
   @override
   void initState() {
     super.initState();
-    _controller = ImagePickerController();
+    _controller = ImagePickerController(
+      hideGalleryInSheet: widget.hideGalleryInSheet,
+    );
     _controller.initialize();
   }
 
@@ -40,7 +47,6 @@ class _CameraViewState extends State<CameraView> {
       body: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Camera Preview
           ValueListenableBuilder<bool>(
             valueListenable: _controller.cameraService.isReady,
             builder: (_, ready, __) {
@@ -50,8 +56,6 @@ class _CameraViewState extends State<CameraView> {
               return const Center(child: CircularProgressIndicator());
             },
           ),
-
-          // Flash button
           Positioned(
             top: 56,
             right: 16,
@@ -68,8 +72,6 @@ class _CameraViewState extends State<CameraView> {
                   ),
             ),
           ),
-
-          // Bottom controls
           Positioned(
             bottom: 100,
             left: 16,
@@ -77,7 +79,6 @@ class _CameraViewState extends State<CameraView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Open Gallery Sheet
                 IconButton(
                   onPressed: _controller.toggleBottomSheet,
                   icon: Container(
@@ -95,8 +96,6 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ),
                 ),
-
-                // Capture Image — серый круг, синий круг и белая иконка затвора в одном Stack по центру
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -145,8 +144,6 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ),
                 ),
-
-                // Switch Camera
                 IconButton(
                   onPressed: _controller.switchCamera,
                   icon: Container(
@@ -169,9 +166,10 @@ class _CameraViewState extends State<CameraView> {
           ),
         ],
       ),
-
-      // 🖼️ Gallery Bottom Sheet
-      bottomSheet: DraggableSheetWidget(controller: _controller),
+      bottomSheet: DraggableSheetWidget(
+        controller: _controller,
+        showGallery: !widget.hideGalleryInSheet,
+      ),
     );
   }
 }
