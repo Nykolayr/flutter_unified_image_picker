@@ -1,77 +1,123 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_unified_image_picker/src/services/bottom_sheet_service.dart';
-import 'package:flutter_unified_image_picker/src/services/camera_service.dart';
-import 'package:flutter_unified_image_picker/src/services/gallery_service.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_unified_image_picker/src/controller/image_picker_controller.dart';
 
-/// Controller that manages camera, gallery, and bottom sheet for the
-/// image picker plugin.
-///
-/// This class acts as the central point to coordinate the services:
-/// - [CameraService] for camera preview, capture, switching lenses, and flash.
-/// - [GalleryService] for fetching images from the device gallery.
-/// - [BottomSheetService] for managing the draggable gallery sheet.
-class ImagePickerController extends ChangeNotifier {
-  /// Camera service that handles camera initialization, preview, capture,
-  /// switching lenses, and flash.
-  final CameraService cameraService = CameraService();
+class DraggableSheetWidget extends StatelessWidget {
+  final ImagePickerController controller;
 
-  /// Gallery service that fetches device images and notifies listeners
-  /// when the gallery is loaded or updated.
-  final GalleryService galleryService = GalleryService();
+  /// Если false — шторка остаётся (ручка, сворачивание), без сетки галереи.
+  final bool showGallery;
 
-  /// Bottom sheet service that manages the draggable sheet state
-  /// and animations.
-  final BottomSheetService bottomSheetService = BottomSheetService();
+  const DraggableSheetWidget({
+    super.key,
+    required this.controller,
+    this.showGallery = true,
+  });
 
-  /// Initializes both the camera and gallery services.
-  ///
-  /// - Calls [CameraService.initCamera] to initialize the camera.
-  /// - Adds listeners to camera readiness and flash state to notify
-  ///   UI updates.
-  /// - Calls [GalleryService.loadGallery] to load device images.
-  /// - Adds listener to gallery images to notify UI updates.
-  Future<void> initialize() async {
-    await cameraService.initCamera();
-    cameraService.isReady.addListener(notifyListeners);
-    cameraService.isFlashOn.addListener(notifyListeners);
-
-    await galleryService.loadGallery();
-    galleryService.imagesNotifier.addListener(notifyListeners);
-  }
-
-  /// Captures an image using the current camera.
-  ///
-  /// Returns the file path of the captured image, or `null` if capture failed.
-  Future<String?> captureImage() async {
-    return await cameraService.captureImage();
-  }
-
-  /// Switches to the next available camera lens.
-  ///
-  /// Supports front/back/other available lenses.
-  Future<void> switchCamera() async {
-    await cameraService.switchCamera();
-  }
-
-  /// Toggles the camera flash between on and off.
-  void toggleFlash() {
-    cameraService.toggleFlash();
-  }
-
-  /// Opens or closes the draggable bottom sheet.
-  ///
-  /// Also notifies listeners so UI can update immediately.
-  void toggleBottomSheet() {
-    bottomSheetService.toggleSheet();
-    notifyListeners();
-  }
-
-  /// Disposes all services and cleans up listeners.
   @override
-  void dispose() {
-    cameraService.dispose();
-    galleryService.dispose();
-    bottomSheetService.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      controller: controller.bottomSheetService.dragController,
+      initialChildSize: 0.25,
+      minChildSize: 0.25,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, scrollController) {
+        return Container(
+          padding: const EdgeInsetsDirectional.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: Container(
+                  height: 5,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (showGallery)
+                    const Text(
+                      'Gallery',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: controller.bottomSheetService.isExpanded,
+                    builder: (_, expanded, __) {
+                      return IconButton(
+                        onPressed: controller.toggleBottomSheet,
+                        icon: Icon(
+                          expanded
+                              ? Icons.keyboard_arrow_down_rounded
+                              : Icons.keyboard_arrow_up_rounded,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              Expanded(
+                child: showGallery
+                    ? ValueListenableBuilder<List<String>>(
+                        valueListenable:
+                            controller.galleryService.imagesNotifier,
+                        builder: (_, images, __) {
+                          if (images.isEmpty) {
+                            return const Center(
+                                child: Text("No images found"));
+                          }
+                          return GridView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(8),
+                            itemCount: images.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                            ),
+                            itemBuilder: (_, index) {
+                              final path = images[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  if (controller
+                                      .bottomSheetService.isExpanded.value) {
+                                    Navigator.pop(context);
+                                    Navigator.pop(context, path);
+                                  } else {
+                                    Navigator.pop(context, path);
+                                  }
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child:
+                                      Image.file(File(path), fit: BoxFit.cover),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      )
+                    : const SizedBox(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
