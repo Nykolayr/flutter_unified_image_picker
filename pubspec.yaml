@@ -1,6 +1,6 @@
 name: flutter_unified_image_picker
 description: "A powerful Flutter plugin for **camera capture** and **gallery selection** with a draggable bottom sheet. Fully decoupled architecture using **CameraService**, **GalleryService**, and **BottomSheetService**, all managed by `ImagePickerController`."
-version: 1.0.1
+version: 1.0.2
 homepage: https://github.com/mirzamahmud/flutter_unified_image_picker
 repository: https://github.com/mirzamahmud/flutter_unified_image_picker
 issue_tracker: https://github.com/mirzamahmud/flutter_unified_image_picker/issues
