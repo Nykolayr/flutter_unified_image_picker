@@ -5,7 +5,14 @@ import 'package:flutter_unified_image_picker/src/controller/image_picker_control
 class DraggableSheetWidget extends StatelessWidget {
   final ImagePickerController controller;
 
-  const DraggableSheetWidget({super.key, required this.controller});
+  /// Если false — шторка остаётся (ручка, сворачивание), без сетки галереи.
+  final bool showGallery;
+
+  const DraggableSheetWidget({
+    super.key,
+    required this.controller,
+    this.showGallery = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +32,6 @@ class DraggableSheetWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drag handle
               Align(
                 alignment: Alignment.center,
                 child: Container(
@@ -38,15 +44,17 @@ class DraggableSheetWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Header with title and toggle icon
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Gallery',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  if (showGallery)
+                    const Text(
+                      'Gallery',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    )
+                  else
+                    const SizedBox.shrink(),
                   ValueListenableBuilder<bool>(
                     valueListenable: controller.bottomSheetService.isExpanded,
                     builder: (_, expanded, __) {
@@ -62,48 +70,49 @@ class DraggableSheetWidget extends StatelessWidget {
                   ),
                 ],
               ),
-
-              // Gallery Grid
               Expanded(
-                child: ValueListenableBuilder<List<String>>(
-                  valueListenable: controller.galleryService.imagesNotifier,
-                  builder: (_, images, __) {
-                    if (images.isEmpty) {
-                      return const Center(child: Text("No images found"));
-                    }
-                    return GridView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.all(8),
-                      itemCount: images.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
-                      itemBuilder: (_, index) {
-                        final path = images[index];
-                        return GestureDetector(
-                          onTap: () {
-                            if (controller
-                                .bottomSheetService
-                                .isExpanded
-                                .value) {
-                              Navigator.pop(context);
-                              Navigator.pop(context, path);
-                            } else {
-                              Navigator.pop(context, path);
-                            }
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(File(path), fit: BoxFit.cover),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: showGallery
+                    ? ValueListenableBuilder<List<String>>(
+                        valueListenable:
+                            controller.galleryService.imagesNotifier,
+                        builder: (_, images, __) {
+                          if (images.isEmpty) {
+                            return const Center(
+                                child: Text("No images found"));
+                          }
+                          return GridView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(8),
+                            itemCount: images.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                            ),
+                            itemBuilder: (_, index) {
+                              final path = images[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  if (controller
+                                      .bottomSheetService.isExpanded.value) {
+                                    Navigator.pop(context);
+                                    Navigator.pop(context, path);
+                                  } else {
+                                    Navigator.pop(context, path);
+                                  }
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child:
+                                      Image.file(File(path), fit: BoxFit.cover),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      )
+                    : const SizedBox(),
               ),
             ],
           ),
