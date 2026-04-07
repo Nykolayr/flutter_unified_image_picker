@@ -1,123 +1,53 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_unified_image_picker/src/controller/image_picker_controller.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_unified_image_picker/src/services/bottom_sheet_service.dart';
+import 'package:flutter_unified_image_picker/src/services/camera_service.dart';
+import 'package:flutter_unified_image_picker/src/services/gallery_service.dart';
 
-class DraggableSheetWidget extends StatelessWidget {
-  final ImagePickerController controller;
+/// Controller that manages camera, gallery, and bottom sheet for the
+/// image picker plugin.
+class ImagePickerController extends ChangeNotifier {
+  ImagePickerController({this.hideGalleryInSheet = false});
 
-  /// Если false — шторка остаётся (ручка, сворачивание), без сетки галереи.
-  final bool showGallery;
+  /// Не грузить галерею; в шторке без сетки (режим фото «после»).
+  final bool hideGalleryInSheet;
 
-  const DraggableSheetWidget({
-    super.key,
-    required this.controller,
-    this.showGallery = true,
-  });
+  final CameraService cameraService = CameraService();
+  final GalleryService galleryService = GalleryService();
+  final BottomSheetService bottomSheetService = BottomSheetService();
+
+  Future<void> initialize() async {
+    await cameraService.initCamera();
+    cameraService.isReady.addListener(notifyListeners);
+    cameraService.isFlashOn.addListener(notifyListeners);
+
+    if (!hideGalleryInSheet) {
+      await galleryService.loadGallery();
+      galleryService.imagesNotifier.addListener(notifyListeners);
+    }
+  }
+
+  Future<String?> captureImage() async {
+    return await cameraService.captureImage();
+  }
+
+  Future<void> switchCamera() async {
+    await cameraService.switchCamera();
+  }
+
+  void toggleFlash() {
+    cameraService.toggleFlash();
+  }
+
+  void toggleBottomSheet() {
+    bottomSheetService.toggleSheet();
+    notifyListeners();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      controller: controller.bottomSheetService.dragController,
-      initialChildSize: 0.25,
-      minChildSize: 0.25,
-      maxChildSize: 0.85,
-      expand: false,
-      builder: (_, scrollController) {
-        return Container(
-          padding: const EdgeInsetsDirectional.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: Container(
-                  height: 5,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (showGallery)
-                    const Text(
-                      'Gallery',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: controller.bottomSheetService.isExpanded,
-                    builder: (_, expanded, __) {
-                      return IconButton(
-                        onPressed: controller.toggleBottomSheet,
-                        icon: Icon(
-                          expanded
-                              ? Icons.keyboard_arrow_down_rounded
-                              : Icons.keyboard_arrow_up_rounded,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              Expanded(
-                child: showGallery
-                    ? ValueListenableBuilder<List<String>>(
-                        valueListenable:
-                            controller.galleryService.imagesNotifier,
-                        builder: (_, images, __) {
-                          if (images.isEmpty) {
-                            return const Center(
-                                child: Text("No images found"));
-                          }
-                          return GridView.builder(
-                            controller: scrollController,
-                            padding: const EdgeInsets.all(8),
-                            itemCount: images.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 4,
-                              mainAxisSpacing: 4,
-                            ),
-                            itemBuilder: (_, index) {
-                              final path = images[index];
-                              return GestureDetector(
-                                onTap: () {
-                                  if (controller
-                                      .bottomSheetService.isExpanded.value) {
-                                    Navigator.pop(context);
-                                    Navigator.pop(context, path);
-                                  } else {
-                                    Navigator.pop(context, path);
-                                  }
-                                },
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child:
-                                      Image.file(File(path), fit: BoxFit.cover),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      )
-                    : const SizedBox(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  void dispose() {
+    cameraService.dispose();
+    galleryService.dispose();
+    bottomSheetService.dispose();
+    super.dispose();
   }
 }
