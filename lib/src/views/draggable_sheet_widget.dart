@@ -6,13 +6,15 @@ import 'package:flutter_unified_image_picker/src/controller/image_picker_control
 class DraggableSheetWidget extends StatelessWidget {
   final ImagePickerController controller;
   final bool showGallery;
-  final Future<void> Function()? onAddMore;
+  final bool galleryMultiPick;
+  final Future<void> Function()? onPickFromGallery;
 
   const DraggableSheetWidget({
     super.key,
     required this.controller,
     this.showGallery = true,
-    this.onAddMore,
+    this.galleryMultiPick = false,
+    this.onPickFromGallery,
   });
 
   @override
@@ -76,9 +78,19 @@ class DraggableSheetWidget extends StatelessWidget {
               Expanded(
                 child: showGallery
                     ? ValueListenableBuilder<List<String>>(
-                        valueListenable: controller.galleryService.imagesNotifier,
+                        valueListenable:
+                            controller.galleryService.imagesNotifier,
                         builder: (_, images, __) {
-                          final itemCount = images.length + 1;
+                          if (images.isEmpty) {
+                            return _GalleryEmptyPrompt(
+                              scrollController: scrollController,
+                              onTap: onPickFromGallery,
+                            );
+                          }
+
+                          final showAddTile = galleryMultiPick;
+                          final itemCount = images.length + (showAddTile ? 1 : 0);
+
                           return GridView.builder(
                             controller: scrollController,
                             padding: const EdgeInsets.all(8),
@@ -90,21 +102,8 @@ class DraggableSheetWidget extends StatelessWidget {
                               mainAxisSpacing: 4,
                             ),
                             itemBuilder: (_, index) {
-                              if (index == images.length) {
-                                return GestureDetector(
-                                  onTap: onAddMore,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.add_photo_alternate_outlined,
-                                      color: Colors.blue,
-                                      size: 32,
-                                    ),
-                                  ),
-                                );
+                              if (showAddTile && index == images.length) {
+                                return _GalleryAddTile(onTap: onPickFromGallery);
                               }
                               final path = images[index];
                               return GestureDetector(
@@ -135,6 +134,77 @@ class DraggableSheetWidget extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _GalleryEmptyPrompt extends StatelessWidget {
+  const _GalleryEmptyPrompt({
+    required this.scrollController,
+    this.onTap,
+  });
+
+  final ScrollController scrollController;
+  final Future<void> Function()? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      controller: scrollController,
+      children: [
+        Material(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.photo_library_outlined,
+                    size: 40,
+                    color: Colors.blue,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Choose from gallery',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GalleryAddTile extends StatelessWidget {
+  const _GalleryAddTile({this.onTap});
+
+  final Future<void> Function()? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(
+          Icons.add_photo_alternate_outlined,
+          color: Colors.blue,
+          size: 32,
+        ),
+      ),
     );
   }
 }
