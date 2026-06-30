@@ -54,22 +54,40 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final controlsBottom =
+        _controller.usesGallerySheet ? 100.0 : padding.bottom + 24.0;
+
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBody: _controller.usesGallerySheet,
       body: Stack(
-        clipBehavior: Clip.none,
+        fit: StackFit.expand,
         children: [
           ValueListenableBuilder<bool>(
             valueListenable: _controller.cameraService.isReady,
             builder: (_, ready, __) {
-              if (ready && _controller.cameraService.controller != null) {
-                return CameraPreview(_controller.cameraService.controller!);
+              final controller = _controller.cameraService.controller;
+              if (ready && controller != null) {
+                return ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.center,
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: controller.value.previewSize?.height ?? 1,
+                        height: controller.value.previewSize?.width ?? 1,
+                        child: CameraPreview(controller),
+                      ),
+                    ),
+                  ),
+                );
               }
               return const Center(child: CircularProgressIndicator());
             },
           ),
           Positioned(
-            top: 56,
+            top: padding.top + 8,
             right: 16,
             child: ValueListenableBuilder<bool>(
               valueListenable: _controller.cameraService.isFlashOn,
@@ -84,7 +102,7 @@ class _CameraViewState extends State<CameraView> {
             ),
           ),
           Positioned(
-            bottom: 100,
+            bottom: controlsBottom,
             left: 16,
             right: 16,
             child: Row(
