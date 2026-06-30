@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_unified_image_picker/flutter_unified_image_picker.dart';
 
 class CameraView extends StatefulWidget {
-  /// Полноэкранная камера с draggable-шторкой галереи.
+  /// Камера на весь экран + кнопка галереи (системный Photo Picker).
   ///
-  /// [hideGalleryInSheet] — шторка без сетки (только съёмка).
-  /// [galleryMultiPick] — false: одно фото в сетке; true: несколько + «+».
-  /// Фото в шторке — через системный Photo Picker (без READ_MEDIA).
+  /// [galleryMultiPick] false (по умолчанию): без шторки, галерея → сразу [path].
+  /// [galleryMultiPick] true: шторка с сеткой после multi-picker (другие приложения).
+  /// [hideGalleryInSheet] устарел по смыслу — шторки нет; галерея по кнопке.
   const CameraView({
     super.key,
     this.hideGalleryInSheet = false,
@@ -41,18 +41,19 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Future<void> _onGalleryPressed() async {
-    if (widget.hideGalleryInSheet) {
-      _controller.toggleBottomSheet();
+    if (_controller.usesGallerySheet) {
+      _controller.expandSheetIfCollapsed();
+      await _controller.pickGalleryForSheet();
       return;
     }
-    _controller.expandSheetIfCollapsed();
-    await _controller.pickGalleryForSheet();
+    final path = await _controller.pickSingleFromGallery();
+    if (path != null && mounted) {
+      Navigator.pop(context, path);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final showSheet = _controller.showGalleryInSheet || widget.hideGalleryInSheet;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -176,11 +177,9 @@ class _CameraViewState extends State<CameraView> {
           ),
         ],
       ),
-      bottomSheet: showSheet
+      bottomSheet: _controller.usesGallerySheet
           ? DraggableSheetWidget(
               controller: _controller,
-              showGallery: _controller.showGalleryInSheet,
-              galleryMultiPick: widget.galleryMultiPick,
               onPickFromGallery: _controller.pickGalleryForSheet,
             )
           : null,

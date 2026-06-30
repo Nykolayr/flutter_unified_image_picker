@@ -11,41 +11,38 @@ class ImagePickerController extends ChangeNotifier {
     this.galleryMultiPick = false,
   });
 
-  /// Не показывать сетку галереи в шторке (только камера).
   final bool hideGalleryInSheet;
-
-  /// false — один файл в шторке; true — несколько + плитка «+».
   final bool galleryMultiPick;
 
   final CameraService cameraService = CameraService();
   final GalleryService galleryService = GalleryService();
   final BottomSheetService bottomSheetService = BottomSheetService();
 
+  /// Шторка только в multi-режиме без [hideGalleryInSheet].
+  bool get usesGallerySheet => galleryMultiPick && !hideGalleryInSheet;
+
   Future<void> initialize() async {
     await cameraService.initCamera();
     cameraService.isReady.addListener(notifyListeners);
     cameraService.isFlashOn.addListener(notifyListeners);
 
-    if (showGalleryInSheet) {
+    if (usesGallerySheet) {
       galleryService.imagesNotifier.addListener(notifyListeners);
     }
   }
 
-  /// Шторка с сеткой (Photo Picker → превью), без READ_MEDIA.
-  bool get showGalleryInSheet => !hideGalleryInSheet;
+  /// Один файл через системный Photo Picker.
+  Future<String?> pickSingleFromGallery() async {
+    final paths = await galleryService.pickImages(allowMultiple: false);
+    if (paths.isEmpty) return null;
+    return paths.first;
+  }
 
-  /// Системный picker → фото в сетке шторки.
+  /// Multi: picker → сетка в шторке.
   Future<void> pickGalleryForSheet() async {
-    final paths = await galleryService.pickImages(
-      allowMultiple: galleryMultiPick,
-    );
+    final paths = await galleryService.pickImages(allowMultiple: true);
     if (paths.isEmpty) return;
-
-    if (galleryMultiPick) {
-      galleryService.addImages(paths);
-    } else {
-      galleryService.imagesNotifier.value = <String>[paths.first];
-    }
+    galleryService.addImages(paths);
     notifyListeners();
     expandSheetIfCollapsed();
   }
