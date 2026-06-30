@@ -13,6 +13,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import io.flutter.plugin.common.PluginRegistry
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,7 +27,7 @@ class FlutterUnifiedImagePickerPlugin : FlutterPlugin, MethodCallHandler, Activi
     private val pickImagesRequestCode = 57001
 
     private val activityResultListener =
-        ActivityPluginBinding.ActivityResultListener { requestCode, resultCode, data ->
+        PluginRegistry.ActivityResultListener { requestCode, resultCode, data ->
             if (requestCode != pickImagesRequestCode) {
                 return@ActivityResultListener false
             }
