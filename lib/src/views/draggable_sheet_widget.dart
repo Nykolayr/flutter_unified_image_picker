@@ -1,17 +1,18 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_unified_image_picker/src/controller/image_picker_controller.dart';
 
 class DraggableSheetWidget extends StatelessWidget {
   final ImagePickerController controller;
-
-  /// Если false — шторка остаётся (ручка, сворачивание), без сетки галереи.
   final bool showGallery;
+  final Future<void> Function()? onAddMore;
 
   const DraggableSheetWidget({
     super.key,
     required this.controller,
     this.showGallery = true,
+    this.onAddMore,
   });
 
   @override
@@ -50,8 +51,10 @@ class DraggableSheetWidget extends StatelessWidget {
                   if (showGallery)
                     const Text(
                       'Gallery',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     )
                   else
                     const SizedBox.shrink(),
@@ -73,17 +76,13 @@ class DraggableSheetWidget extends StatelessWidget {
               Expanded(
                 child: showGallery
                     ? ValueListenableBuilder<List<String>>(
-                        valueListenable:
-                            controller.galleryService.imagesNotifier,
+                        valueListenable: controller.galleryService.imagesNotifier,
                         builder: (_, images, __) {
-                          if (images.isEmpty) {
-                            return const Center(
-                                child: Text("No images found"));
-                          }
+                          final itemCount = images.length + 1;
                           return GridView.builder(
                             controller: scrollController,
                             padding: const EdgeInsets.all(8),
-                            itemCount: images.length,
+                            itemCount: itemCount,
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
@@ -91,6 +90,22 @@ class DraggableSheetWidget extends StatelessWidget {
                               mainAxisSpacing: 4,
                             ),
                             itemBuilder: (_, index) {
+                              if (index == images.length) {
+                                return GestureDetector(
+                                  onTap: onAddMore,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.add_photo_alternate_outlined,
+                                      color: Colors.blue,
+                                      size: 32,
+                                    ),
+                                  ),
+                                );
+                              }
                               final path = images[index];
                               return GestureDetector(
                                 onTap: () {
@@ -104,8 +119,10 @@ class DraggableSheetWidget extends StatelessWidget {
                                 },
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child:
-                                      Image.file(File(path), fit: BoxFit.cover),
+                                  child: Image.file(
+                                    File(path),
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               );
                             },

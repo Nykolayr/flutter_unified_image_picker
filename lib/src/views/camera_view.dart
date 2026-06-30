@@ -3,20 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_unified_image_picker/flutter_unified_image_picker.dart';
 
 class CameraView extends StatefulWidget {
-  /// A full-screen camera view with integrated gallery bottom sheet.
+  /// Полноэкранная камера с опциональной draggable-шторкой галереи.
   ///
-  /// Responsibilities:
-  /// - Display camera preview.
-  /// - Toggle flash on/off.
-  /// - Switch between available cameras.
-  /// - Capture images.
-  /// - Open the gallery bottom sheet to select existing images.
-  ///
-  /// При [hideGalleryInSheet] шторка и кнопка её открытия остаются; из шторки
-  /// убрана только галерея (снимок только кнопкой съёмки).
-  const CameraView({super.key, this.hideGalleryInSheet = false});
+  /// [hideGalleryInSheet] — без сетки в шторке (только съёмка).
+  /// [galleryMultiPick] — false: кнопка галереи → системный picker → сразу pop(path);
+  /// true: multi-picker и сетка в шторке.
+  const CameraView({
+    super.key,
+    this.hideGalleryInSheet = false,
+    this.galleryMultiPick = false,
+  });
 
   final bool hideGalleryInSheet;
+  final bool galleryMultiPick;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -30,6 +29,7 @@ class _CameraViewState extends State<CameraView> {
     super.initState();
     _controller = ImagePickerController(
       hideGalleryInSheet: widget.hideGalleryInSheet,
+      galleryMultiPick: widget.galleryMultiPick,
     );
     _controller.initialize();
   }
@@ -38,6 +38,24 @@ class _CameraViewState extends State<CameraView> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _onGalleryPressed() async {
+    if (widget.hideGalleryInSheet) {
+      _controller.toggleBottomSheet();
+      return;
+    }
+    if (!widget.galleryMultiPick) {
+      final path = await _controller.pickSingleGalleryImage();
+      if (path != null && mounted) {
+        Navigator.pop(context, path);
+      }
+      return;
+    }
+    if (!_controller.bottomSheetService.isExpanded.value) {
+      _controller.toggleBottomSheet();
+    }
+    await _controller.pickMoreGalleryImages();
   }
 
   @override
@@ -61,15 +79,14 @@ class _CameraViewState extends State<CameraView> {
             right: 16,
             child: ValueListenableBuilder<bool>(
               valueListenable: _controller.cameraService.isFlashOn,
-              builder:
-                  (_, isFlash, __) => IconButton(
-                    onPressed: _controller.toggleFlash,
-                    icon: Icon(
-                      isFlash ? Icons.flash_on : Icons.flash_off,
-                      size: 20,
-                      color: isFlash ? Colors.amber : Colors.white,
-                    ),
-                  ),
+              builder: (_, isFlash, __) => IconButton(
+                onPressed: _controller.toggleFlash,
+                icon: Icon(
+                  isFlash ? Icons.flash_on : Icons.flash_off,
+                  size: 20,
+                  color: isFlash ? Colors.amber : Colors.white,
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -80,7 +97,7 @@ class _CameraViewState extends State<CameraView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  onPressed: _controller.toggleBottomSheet,
+                  onPressed: _onGalleryPressed,
                   icon: Container(
                     height: 48,
                     width: 48,
@@ -168,7 +185,8 @@ class _CameraViewState extends State<CameraView> {
       ),
       bottomSheet: DraggableSheetWidget(
         controller: _controller,
-        showGallery: !widget.hideGalleryInSheet,
+        showGallery: _controller.showGalleryGrid,
+        onAddMore: _controller.pickMoreGalleryImages,
       ),
     );
   }
